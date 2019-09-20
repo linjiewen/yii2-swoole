@@ -21,7 +21,7 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
     public $handler;
 
     public $timeout = null;
-    
+
     public $name = "feehi_session";
 
     private $_cookieParams = [
@@ -33,6 +33,12 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
     ];
 
     private $_prefix = "feehi_";
+
+    /**
+     * @var $frozenSessionData array|null is used for saving session between recreations due to session parameters update.
+     */
+    private $frozenSessionData;
+
 
     public function init()
     {
@@ -153,7 +159,7 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
     public function regenerateID($deleteOldSession = false)
     {
     }
-    
+
     public function setName($name)
     {
         $this->name = $name;
@@ -365,5 +371,67 @@ class Session extends Component implements \IteratorAggregate, \ArrayAccess, \Co
     {
         $this->open();
         unset($_SESSION[$offset]);
+    }
+
+    /**
+     * Set cache limiter
+     *
+     * @param string $cacheLimiter
+     * @since 2.0.14
+     */
+    public function setCacheLimiter($cacheLimiter)
+    {
+        $this->freeze();
+        session_cache_limiter($cacheLimiter);
+        $this->unfreeze();
+    }
+
+    /**
+     * Ends the current session and store session data.
+     */
+    public function close()
+    {
+        if ($this->getIsActive()) {
+            YII_DEBUG ? session_write_close() : @session_write_close();
+        }
+    }
+
+    /**
+     * If session is started it's not possible to edit session ini settings. In PHP7.2+ it throws exception.
+     * This function saves session data to temporary variable and stop session.
+     * @since 2.0.14
+     */
+    protected function freeze()
+    {
+        if ($this->getIsActive()) {
+            if (isset($_SESSION)) {
+                $this->frozenSessionData = $_SESSION;
+            }
+            $this->close();
+            Yii::info('Session frozen', __METHOD__);
+        }
+    }
+
+    /**
+     * Starts session and restores data from temporary variable
+     * @since 2.0.14
+     */
+    protected function unfreeze()
+    {
+        if (null !== $this->frozenSessionData) {
+
+            YII_DEBUG ? session_start() : @session_start();
+
+            if ($this->getIsActive()) {
+                Yii::info('Session unfrozen', __METHOD__);
+            } else {
+                $error = error_get_last();
+                $message = isset($error['message']) ? $error['message'] : 'Failed to unfreeze session.';
+                Yii::error($message, __METHOD__);
+            }
+
+            $_SESSION = $this->frozenSessionData;
+            $this->frozenSessionData = null;
+        }
     }
 }
