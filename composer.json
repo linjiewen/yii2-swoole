@@ -1,0 +1,21 @@
+{
+    "name": "haotong/yii2swoole",
+    "description": "yii2swoole",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "LJW",
+            "email": "576006908@qq.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=5.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "haotong\\": "src/"
+        }
+    }
+}
